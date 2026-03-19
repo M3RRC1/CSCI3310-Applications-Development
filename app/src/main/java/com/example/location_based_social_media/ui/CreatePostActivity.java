@@ -1,7 +1,9 @@
 package com.example.location_based_social_media.ui;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -9,6 +11,7 @@ import android.provider.MediaStore;
 import android.widget.*;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.room.Room;
 
 import com.example.location_based_social_media.R;
@@ -55,17 +58,29 @@ public class CreatePostActivity extends AppCompatActivity {
 
         // Create Post
         buttonPost.setOnClickListener(v -> {
+
             String text = editTextPost.getText().toString();
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        1
+                );
+                return;
+            }
 
             fusedLocationClient.getLastLocation()
                     .addOnSuccessListener(location -> {
                         if (location != null) {
                             savePost(text, location);
+                        } else {
+                            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
                         }
                     });
         });
     }
-
     private void savePost(String text, Location location) {
         Post post = new Post();
         post.text = text;
