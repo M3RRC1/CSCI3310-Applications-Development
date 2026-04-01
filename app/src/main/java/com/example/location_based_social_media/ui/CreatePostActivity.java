@@ -82,12 +82,32 @@ public class CreatePostActivity extends AppCompatActivity {
         });
     }
     private void savePost(String text, Location location) {
+        // Guard against empty text
+        if (text == null || text.trim().isEmpty()) {
+            Toast.makeText(this, "Please enter some text for your post", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Guard against null location
+        if (location == null) {
+            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Post post = new Post();
         post.text = text;
-        post.imageUri = imageUri != null ? imageUri.toString() : null;
+
+        // Image is optional
+        if (imageUri != null) {
+            post.imageUri = imageUri.toString();
+        } else {
+            post.imageUri = null; // safe default
+        }
+
         post.latitude = location.getLatitude();
         post.longitude = location.getLongitude();
         post.timestamp = System.currentTimeMillis();
+
 
         db.postDao().insert(post);
 

@@ -16,4 +16,5 @@ public class Post {
     public double longitude;
 
     public long timestamp;
+    public int likes;
 }
