@@ -1,6 +1,7 @@
 package com.example.location_based_social_media.ui;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import androidx.annotation.NonNull;
@@ -14,7 +15,10 @@ import com.google.android.gms.maps.model.*;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -70,13 +74,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             startActivity(intent);
         });
         // Just for my testing
-//        Post testPost = new Post();
-//        testPost.text = "Hello world!";
-//        testPost.latitude = 0;
-//        testPost.longitude = 0;
-//        testPost.timestamp = System.currentTimeMillis();
-//
-//        db.postDao().insert(testPost);
+        //Post testPost = new Post();
+        //testPost.text = "Hello world!";
+        //testPost.latitude = 22.4201;
+        //testPost.longitude = 114.2072;
+        //testPost.timestamp = System.currentTimeMillis();
+        //testPost.imageUri =
+        //db.postDao().insert(testPost);
 
         List<Post> posts = db.postDao().getAllPosts();
         Log.d("DB_TEST", "Posts count: " + posts.size());
@@ -92,6 +96,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         mMap.setMyLocationEnabled(true);
+
+        //enable zooming
+        UiSettings uiSettings = mMap.getUiSettings();
+        uiSettings.setZoomGesturesEnabled(true);   // pinch zoom
+        uiSettings.setZoomControlsEnabled(true);   // +/- zoom buttons
+
+        //calls fragment to show complete post
+        mMap.setOnMarkerClickListener(marker -> {
+            // Retrieve post data from marker
+            String postText = marker.getSnippet();
+            Post post = (Post) marker.getTag();
+
+            // Show fragment
+            showPostFragment(post);
+
+            return true; // consume the click
+        });
+
 
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(this, location -> {
@@ -114,9 +136,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 .strokeWidth(2f));
 
                         // Add marker
-                        mMap.addMarker(new MarkerOptions()
+                        //can be removed as default google map blue marker already exists
+                        /*mMap.addMarker(new MarkerOptions()
                                 .position(userLatLng)
-                                .title("You are here"));
+                                .title("You are here"));*/
 
                         loadPostsOnMap();
 
@@ -158,14 +181,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (results[0] <= radiusInMeters) {
                 LatLng position = new LatLng(post.latitude, post.longitude);
 
-                mMap.addMarker(new MarkerOptions()
+                Marker marker = mMap.addMarker(new MarkerOptions()
                         .position(position)
                         .title("Post")
                         .snippet(post.text));
+                marker.setTag(post);
             }
         }
     }
 
+    //update map whenever resume, such that post can be seen immediately
+    @Override
+    protected void onResume(){
+        super.onResume();
+        loadPostsOnMap();
+    }
 
-
+    //show fragment when click on marker
+    private void showPostFragment(Post post) {
+        PostDetailFragment fragment = PostDetailFragment.newInstance(post.id);
+        fragment.show(getSupportFragmentManager(), "post_detail");
+    }
 }

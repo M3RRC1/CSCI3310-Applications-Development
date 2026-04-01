@@ -15,7 +15,7 @@
 
     <Button
         android:id="@+id/buttonSelectImage"
-        android:text="Select Image"
+        android:text="Add Image"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 

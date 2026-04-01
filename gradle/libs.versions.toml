@@ -11,6 +11,7 @@ constraintlayout = "2.2.1"
 playServicesLocation = "21.3.0"
 playServicesMaps = "20.0.0"
 roomRuntime = "2.8.4"
+glide = "5.0.5"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -26,7 +27,7 @@ play-services-location = { module = "com.google.android.gms:play-services-locati
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
-
+glide = {group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 
