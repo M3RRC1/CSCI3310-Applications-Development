@@ -1,205 +1,128 @@
 package com.example.location_based_social_media.ui;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.location.Location;
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-
-import com.example.location_based_social_media.data.Post;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.*;
-import com.google.android.gms.maps.model.*;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.app.ActivityCompat;
+
 import com.example.location_based_social_media.R;
+import com.example.location_based_social_media.data.Post;
+import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.example.location_based_social_media.location.LocationHelper;
-import androidx.room.Room;
-import com.example.location_based_social_media.data.AppDatabase;
+import com.google.android.gms.maps.*;
+import com.google.android.gms.maps.model.*;
 
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private FusedLocationProviderClient fusedLocationClient;
-    private AppDatabase db;
-    private float radiusInMeters = 1000; // 1km (can change later)
+    private FirebaseManager firebaseManager;
     private Location currentLocation;
-
-
-
+    private float radiusInMeters = 1000f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Button buttonAddPost = findViewById(R.id.buttonAddPost);
-        db = Room.databaseBuilder(
-                getApplicationContext(),
-                AppDatabase.class,
-                "post-database"
-        ).allowMainThreadQueries().build();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Request permission
+        firebaseManager = new FirebaseManager();
+
+        Button buttonAddPost = findViewById(R.id.buttonAddPost);
+        buttonAddPost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
+
         if (!LocationHelper.hasLocationPermission(this)) {
             LocationHelper.requestLocationPermission(this);
         }
 
-        // Initialize map
-        SupportMapFragment mapFragment =
-                (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-
-        if (mapFragment != null) {
-            mapFragment.getMapAsync(this);
-        }
-
-        buttonAddPost.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, CreatePostActivity.class);
-            startActivity(intent);
-        });
-        // Just for my testing
-        //Post testPost = new Post();
-        //testPost.text = "Hello world!";
-        //testPost.latitude = 22.4201;
-        //testPost.longitude = 114.2072;
-        //testPost.timestamp = System.currentTimeMillis();
-        //testPost.imageUri =
-        //db.postDao().insert(testPost);
-
-        List<Post> posts = db.postDao().getAllPosts();
-        Log.d("DB_TEST", "Posts count: " + posts.size());
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+        if (mapFragment != null) mapFragment.getMapAsync(this);
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
 
+        mMap = googleMap;
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
+                != PackageManager.PERMISSION_GRANTED) return;
 
         mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setZoomGesturesEnabled(true);
 
-        //enable zooming
-        UiSettings uiSettings = mMap.getUiSettings();
-        uiSettings.setZoomGesturesEnabled(true);   // pinch zoom
-        uiSettings.setZoomControlsEnabled(true);   // +/- zoom buttons
-
-        //calls fragment to show complete post
+        // Marker click
         mMap.setOnMarkerClickListener(marker -> {
-            // Retrieve post data from marker
-            String postText = marker.getSnippet();
             Post post = (Post) marker.getTag();
-
-            // Show fragment
-            showPostFragment(post);
-
-            return true; // consume the click
+            if (post != null) {
+                PostDetailFragment.newInstance(post.id)
+                        .show(getSupportFragmentManager(), "post_detail");
+            }
+            return true;
         });
 
+        LocationHelper.getLastLocation(this, location -> {
+            if (location != null) {
+                currentLocation = location;
 
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, location -> {
+                LatLng userLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 
-                    if (location != null) {
-                        currentLocation = location;
+                // Zoom camera to user
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 15f));
 
-                        LatLng userLatLng = new LatLng(
-                                location.getLatitude(),
-                                location.getLongitude()
-                        );
+                // draw radius circle
+                mMap.addCircle(new CircleOptions()
+                        .center(userLatLng)
+                        .radius(radiusInMeters)
+                        .strokeWidth(2f)
+                        .strokeColor(0x550000FF)
+                        .fillColor(0x220000FF));
 
-                        // Move camera
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 15));
+                loadPosts();
+            } else {
+                Toast.makeText(this, "Could not get location", Toast.LENGTH_SHORT).show();
+                loadPosts();
+            }
+        });
+    }
 
-                        // Add circle indicator
-                        mMap.addCircle(new CircleOptions()
-                                .center(userLatLng)
-                                .radius(radiusInMeters)
-                                .strokeWidth(2f));
+    private void loadPosts() {
+        firebaseManager.getPosts(posts -> {
+            mMap.clear();
+            for (Post post : posts) {
+                float[] distance = new float[1];
+                if (currentLocation != null) {
+                    Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
+                            post.latitude, post.longitude, distance);
+                }
 
-                        // Add marker
-                        //can be removed as default google map blue marker already exists
-                        /*mMap.addMarker(new MarkerOptions()
-                                .position(userLatLng)
-                                .title("You are here"));*/
-
-                        loadPostsOnMap();
-
-                    } else {
-                        Toast.makeText(this, "Location is null", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                if (distance[0] <= radiusInMeters || currentLocation == null) {
+                    LatLng pos = new LatLng(post.latitude, post.longitude);
+                    Marker marker = mMap.addMarker(new MarkerOptions().position(pos).title("Post").snippet(post.text));
+                    marker.setTag(post);
+                }
+            }
+        });
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
+    protected void onResume() {
+        super.onResume();
+        loadPosts();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == LocationHelper.LOCATION_PERMISSION_REQUEST) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                recreate(); // reload activity
-            }
-        }
-    }
-    private void loadPostsOnMap() {
-        if (currentLocation == null) return;
-
-        List<Post> posts = db.postDao().getAllPosts();
-
-        for (Post post : posts) {
-
-            float[] results = new float[1];
-
-            Location.distanceBetween(
-                    currentLocation.getLatitude(),
-                    currentLocation.getLongitude(),
-                    post.latitude,
-                    post.longitude,
-                    results
-            );
-
-            if (results[0] <= radiusInMeters) {
-                LatLng position = new LatLng(post.latitude, post.longitude);
-
-                Marker marker = mMap.addMarker(new MarkerOptions()
-                        .position(position)
-                        .title("Post")
-                        .snippet(post.text));
-                marker.setTag(post);
-            }
-        }
+        if (requestCode == LocationHelper.LOCATION_PERMISSION_REQUEST) recreate();
     }
 
-    //update map whenever resume, such that post can be seen immediately
-    @Override
-    protected void onResume(){
-        super.onResume();
-        loadPostsOnMap();
-    }
 
-    //show fragment when click on marker
-    private void showPostFragment(Post post) {
-        PostDetailFragment fragment = PostDetailFragment.newInstance(post.id);
-        fragment.show(getSupportFragmentManager(), "post_detail");
-    }
 }

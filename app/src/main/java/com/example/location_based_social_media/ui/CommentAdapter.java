@@ -9,35 +9,33 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.location_based_social_media.data.Comment;
+import com.example.location_based_social_media.R;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
+public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHolder> {
 
-    private List<Comment> comments;
+    private List<Comment> comments = new ArrayList<>();
 
-    public CommentAdapter(List<Comment> comments) {
+    public void setComments(List<Comment> comments) {
         this.comments = comments;
-    }
-
-    public void updateComments(List<Comment> newComments) {
-        this.comments = newComments;
         notifyDataSetChanged();
     }
 
     @NonNull
     @Override
-    public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(android.R.layout.simple_list_item_2, parent, false);
-        return new CommentViewHolder(view);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
-        Comment comment = comments.get(position);
-        holder.userView.setText(comment.userId);
-        holder.textView.setText(comment.text);
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        Comment c = comments.get(position);
+        holder.user.setText(c.userId);
+        holder.text.setText(c.text);
     }
 
     @Override
@@ -45,14 +43,14 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         return comments.size();
     }
 
-    static class CommentViewHolder extends RecyclerView.ViewHolder {
-        TextView userView;
-        TextView textView;
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView user;
+        TextView text;
 
-        CommentViewHolder(View itemView) {
+        ViewHolder(View itemView) {
             super(itemView);
-            userView = itemView.findViewById(android.R.id.text1);
-            textView = itemView.findViewById(android.R.id.text2);
+            user = itemView.findViewById(android.R.id.text1);
+            text = itemView.findViewById(android.R.id.text2);
         }
     }
 }

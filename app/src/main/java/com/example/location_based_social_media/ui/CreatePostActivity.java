@@ -10,13 +10,13 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.widget.*;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.room.Room;
 
 import com.example.location_based_social_media.R;
-import com.example.location_based_social_media.data.AppDatabase;
 import com.example.location_based_social_media.data.Post;
+import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 
@@ -28,8 +28,8 @@ public class CreatePostActivity extends AppCompatActivity {
     private ImageView imagePreview;
     private Uri imageUri;
 
-    private AppDatabase db;
     private FusedLocationProviderClient fusedLocationClient;
+    private FirebaseManager firebaseManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,17 +38,11 @@ public class CreatePostActivity extends AppCompatActivity {
 
         editTextPost = findViewById(R.id.editTextPost);
         imagePreview = findViewById(R.id.imagePreview);
-
         Button buttonSelectImage = findViewById(R.id.buttonSelectImage);
         Button buttonPost = findViewById(R.id.buttonPost);
 
-        db = Room.databaseBuilder(
-                getApplicationContext(),
-                AppDatabase.class,
-                "post-database"
-        ).allowMainThreadQueries().build();
-
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        firebaseManager = new FirebaseManager();
 
         // Select Image
         buttonSelectImage.setOnClickListener(v -> {
@@ -57,68 +51,45 @@ public class CreatePostActivity extends AppCompatActivity {
         });
 
         // Create Post
-        buttonPost.setOnClickListener(v -> {
-
-            String text = editTextPost.getText().toString();
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-
-                ActivityCompat.requestPermissions(
-                        this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        1
-                );
-                return;
-            }
-
-            fusedLocationClient.getLastLocation()
-                    .addOnSuccessListener(location -> {
-                        if (location != null) {
-                            savePost(text, location);
-                        } else {
-                            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-        });
+        buttonPost.setOnClickListener(v -> createPost());
     }
-    private void savePost(String text, Location location) {
-        // Guard against empty text
-        if (text == null || text.trim().isEmpty()) {
-            Toast.makeText(this, "Please enter some text for your post", Toast.LENGTH_SHORT).show();
+
+    private void createPost() {
+        String text = editTextPost.getText().toString().trim();
+        if (text.isEmpty()) {
+            Toast.makeText(this, "Please enter post text", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Guard against null location
-        if (location == null) {
-            Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             return;
         }
 
-        Post post = new Post();
-        post.text = text;
+        fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+            if (location != null) {
+                Post post = new Post();
+                post.text = text;
+                post.imageUri = imageUri != null ? imageUri.toString() : null;
+                post.latitude = location.getLatitude();
+                post.longitude = location.getLongitude();
+                post.timestamp = System.currentTimeMillis();
+                post.userId = firebaseManager.getUserId();
 
-        // Image is optional
-        if (imageUri != null) {
-            post.imageUri = imageUri.toString();
-        } else {
-            post.imageUri = null; // safe default
-        }
-
-        post.latitude = location.getLatitude();
-        post.longitude = location.getLongitude();
-        post.timestamp = System.currentTimeMillis();
-
-
-        db.postDao().insert(post);
-
-        Toast.makeText(this, "Post created!", Toast.LENGTH_SHORT).show();
-        finish();
+                firebaseManager.addPost(post);
+                Toast.makeText(this, "Post created!", Toast.LENGTH_SHORT).show();
+                finish();
+            } else {
+                Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
         if (requestCode == PICK_IMAGE && resultCode == Activity.RESULT_OK && data != null) {
             imageUri = data.getData();
             imagePreview.setImageURI(imageUri);

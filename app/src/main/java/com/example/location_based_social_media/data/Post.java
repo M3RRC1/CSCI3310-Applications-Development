@@ -1,20 +1,23 @@
 package com.example.location_based_social_media.data;
 
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-
-@Entity
 public class Post {
-
-    @PrimaryKey(autoGenerate = true)
-    public int id;
-
+    public String id;          // Firestore document ID
+    public String userId;      // who created the post
     public String text;
-    public String imageUri;
-
+    public String imageUri;    // optional image
     public double latitude;
     public double longitude;
+    public long timestamp;     // creation time
 
-    public long timestamp;
-    public int likes;
+    // Firestore requires an empty constructor
+    public Post() {}
+
+    public Post(String userId, String text, String imageUri, double latitude, double longitude, long timestamp) {
+        this.userId = userId;
+        this.text = text;
+        this.imageUri = imageUri;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.timestamp = timestamp;
+    }
 }
