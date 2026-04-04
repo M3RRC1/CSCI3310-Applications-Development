@@ -12,6 +12,8 @@ playServicesLocation = "21.3.0"
 playServicesMaps = "20.0.0"
 roomRuntime = "2.8.4"
 glide = "5.0.5"
+firebaseFirestore = "26.1.2"
+firebaseAuth = "24.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -28,6 +30,8 @@ play-services-maps = { module = "com.google.android.gms:play-services-maps", ver
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 glide = {group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 
