@@ -15,11 +15,10 @@ import androidx.core.app.ActivityCompat;
 import com.example.location_based_social_media.R;
 import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
+import com.example.location_based_social_media.Notifications.NotificationHelper;
 import com.example.location_based_social_media.location.LocationHelper;
 import com.google.android.gms.maps.*;
 import com.google.android.gms.maps.model.*;
-
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -44,6 +43,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         if (mapFragment != null) mapFragment.getMapAsync(this);
+
+        NotificationHelper.requestNotificationPermission(this);
+        NotificationHelper.createChannel(this);
+        firebaseManager.listenForNearbyPosts(this);
     }
 
     @Override
@@ -56,6 +59,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
+        mMap.setMinZoomPreference(18f);
 
         // Marker click
         mMap.setOnMarkerClickListener(marker -> {
@@ -115,14 +119,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onResume() {
         super.onResume();
         loadPosts();
+        firebaseManager.listenForNearbyPosts(this);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == LocationHelper.LOCATION_PERMISSION_REQUEST) recreate();
+        if (requestCode == LocationHelper.LOCATION_PERMISSION_REQUEST)
+            recreate();
+        else if (requestCode == 1001) {
+            // handle notification permission
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Notifications allowed
+            } else {
+                Toast.makeText(this, "Notifications disabled", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
+
+
+
 
 
 }

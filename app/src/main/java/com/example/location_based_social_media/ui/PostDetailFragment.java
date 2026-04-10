@@ -1,6 +1,8 @@
 package com.example.location_based_social_media.ui;
 
+import android.content.Intent;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,6 +26,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
     private boolean liked;
     private FirebaseManager firebaseManager;
     private TextView likesView;
+    private Post currentPost;
 
     public static PostDetailFragment newInstance(String postId) {
         PostDetailFragment fragment = new PostDetailFragment();
@@ -47,6 +50,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
         likesView = view.findViewById(R.id.like_count);
         ImageButton likeBtn = view.findViewById(R.id.button_like);
         ImageButton commentBtn = view.findViewById(R.id.button_comment);
+        ImageButton shareBtn = view.findViewById(R.id.button_share);
 
         if (getArguments() != null) postId = getArguments().getString("postId");
 
@@ -54,6 +58,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
         firebaseManager.getPosts(posts -> {
             for (Post post : posts) {
                 if (post.id.equals(postId)) {
+                    currentPost = post;
                     textView.setText(post.text);
                     if (post.imageUri != null) {
                         Glide.with(this).load(post.imageUri).into(imageView);
@@ -83,6 +88,38 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
             CommentFragment.newInstance(postId).show(getParentFragmentManager(), "comments");
         });
 
+        shareBtn.setOnClickListener(v->sharePost(currentPost));
         return view;
+    }
+
+    private void sharePost(Post post) {
+        if (post == null) return;
+
+        // Share text
+        String shareText = post.text;
+
+        Uri imageUri = null;
+        if (post.imageUri != null && !post.imageUri.isEmpty()) {
+            imageUri = Uri.parse(post.imageUri);
+        }
+
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+
+        if (imageUri != null) {
+            // Share text + image
+            sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+            sendIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
+            sendIntent.setType("image/*");
+            sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } else {
+            // Share text only
+            sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+            sendIntent.setType("text/plain");
+        }
+
+        // Show chooser
+        Intent shareIntent = Intent.createChooser(sendIntent, "Share post via");
+        startActivity(shareIntent);
     }
 }
