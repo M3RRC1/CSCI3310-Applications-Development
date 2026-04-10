@@ -17,6 +17,7 @@ import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.example.location_based_social_media.Notifications.NotificationHelper;
 import com.example.location_based_social_media.location.LocationHelper;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.android.gms.maps.*;
 import com.google.android.gms.maps.model.*;
 
@@ -25,17 +26,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private FirebaseManager firebaseManager;
     private Location currentLocation;
-    private float radiusInMeters = 1000f;
+    private float radiusInMeters = 100000f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_main);
 
         firebaseManager = new FirebaseManager();
 
         Button buttonAddPost = findViewById(R.id.buttonAddPost);
+        Button buttonSignOut = findViewById(R.id.buttonSignOut);
         buttonAddPost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
+        buttonSignOut.setOnClickListener(v -> {
+            firebaseManager.stopNearbyPostsListener();
+            FirebaseAuth.getInstance().signOut();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        });
 
         if (!LocationHelper.hasLocationPermission(this)) {
             LocationHelper.requestLocationPermission(this);
@@ -59,7 +76,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
-        mMap.setMinZoomPreference(18f);
+        mMap.setMinZoomPreference(12f);
 
         // Marker click
         mMap.setOnMarkerClickListener(marker -> {
@@ -74,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         LocationHelper.getLastLocation(this, location -> {
             if (location != null) {
                 currentLocation = location;
+                firebaseManager.setCurrentLocation(location);
 
                 LatLng userLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 
@@ -97,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     private void loadPosts() {
+        if (mMap == null) return;
         firebaseManager.getPosts(posts -> {
             mMap.clear();
             for (Post post : posts) {
@@ -108,18 +127,33 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
                 if (distance[0] <= radiusInMeters || currentLocation == null) {
                     LatLng pos = new LatLng(post.latitude, post.longitude);
-                    Marker marker = mMap.addMarker(new MarkerOptions().position(pos).title("Post").snippet(post.text));
+                    String userLabel = post.userId != null && post.userId.length() > 8
+                            ? post.userId.substring(0, 8) + "..."
+                            : (post.userId == null || post.userId.isEmpty() ? "Unknown" : post.userId);
+                    String snippetText = post.text == null ? "" : post.text;
+                    Marker marker = mMap.addMarker(new MarkerOptions()
+                            .position(pos)
+                            .title("User: " + userLabel)
+                            .snippet(snippetText));
                     marker.setTag(post);
                 }
             }
-        });
+        }, error -> Toast.makeText(this, "Load posts failed: " + error, Toast.LENGTH_LONG).show());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadPosts();
+        if (mMap != null) {
+            loadPosts();
+        }
         firebaseManager.listenForNearbyPosts(this);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        firebaseManager.stopNearbyPostsListener();
     }
 
     @Override

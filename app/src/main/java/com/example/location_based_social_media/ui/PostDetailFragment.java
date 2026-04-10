@@ -46,6 +46,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
         firebaseManager = new FirebaseManager();
 
         TextView textView = view.findViewById(R.id.post_text);
+        TextView userView = view.findViewById(R.id.post_user);
         ImageView imageView = view.findViewById(R.id.post_image);
         likesView = view.findViewById(R.id.like_count);
         ImageButton likeBtn = view.findViewById(R.id.button_like);
@@ -60,11 +61,16 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
                 if (post.id.equals(postId)) {
                     currentPost = post;
                     textView.setText(post.text);
+                    userView.setText("Posted by: " + formatUserLabel(post.userId));
                     if (post.imageUri != null) {
                         Glide.with(this).load(post.imageUri).into(imageView);
                     }
                     break;
                 }
+            }
+        }, error -> {
+            if (isAdded()) {
+                Toast.makeText(requireContext(), "Load post failed: " + error, Toast.LENGTH_LONG).show();
             }
         });
 
@@ -121,5 +127,15 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
         // Show chooser
         Intent shareIntent = Intent.createChooser(sendIntent, "Share post via");
         startActivity(shareIntent);
+    }
+
+    private String formatUserLabel(String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return "Unknown user";
+        }
+        if (userId.length() <= 8) {
+            return userId;
+        }
+        return userId.substring(0, 8) + "...";
     }
 }

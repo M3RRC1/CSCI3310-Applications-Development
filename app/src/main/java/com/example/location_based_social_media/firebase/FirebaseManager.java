@@ -2,6 +2,7 @@ package com.example.location_based_social_media.firebase;
 
 import android.content.Context;
 import android.location.Location;
+import android.net.Uri;
 
 import com.example.location_based_social_media.Notifications.NotificationHelper;
 import com.example.location_based_social_media.data.Comment;
@@ -9,16 +10,25 @@ import com.example.location_based_social_media.data.Like;
 import com.example.location_based_social_media.data.Post;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.*;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class FirebaseManager {
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
     private final FirebaseAuth auth = FirebaseAuth.getInstance();
+    private final FirebaseStorage storage = FirebaseStorage.getInstance();
+    private ListenerRegistration nearbyPostsListener;
     private Location currentLocation;
     private float radiusInMeters = 1000f;
+
+    public void setCurrentLocation(Location location) {
+        this.currentLocation = location;
+    }
 
     public String getUserId() {
         return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "";
@@ -30,10 +40,84 @@ public class FirebaseManager {
         ref.set(post);
     }
 
-    public void getPosts(final PostsCallback callback) {
+    public void addPostWithOptionalImage(Post post, Uri localImageUri, final OperationCallback callback) {
+        ensureSignedIn(new OperationCallback() {
+            @Override
+            public void onSuccess() {
+                if (post.userId == null || post.userId.trim().isEmpty()) {
+                    post.userId = getUserId();
+                }
+                if (localImageUri == null) {
+                    addPostWithCallback(post, callback);
+                    return;
+                }
+
+                StorageReference imageRef = storage.getReference()
+                        .child("post_images/" + UUID.randomUUID() + ".jpg");
+
+                imageRef.putFile(localImageUri)
+                        .continueWithTask(task -> {
+                            if (!task.isSuccessful()) {
+                                throw task.getException() != null
+                                        ? task.getException()
+                                        : new RuntimeException("Upload task failed");
+                            }
+                            return imageRef.getDownloadUrl();
+                        })
+                        .addOnSuccessListener(downloadUri -> {
+                            post.imageUri = downloadUri.toString();
+                            addPostWithCallback(post, callback);
+                        })
+                        .addOnFailureListener(e -> callback.onFailure("Image upload failed: " + safeErrorMessage(e)));
+            }
+
+            @Override
+            public void onFailure(String error) {
+                callback.onFailure(error);
+            }
+        });
+    }
+
+    private void addPostWithCallback(Post post, final OperationCallback callback) {
+        DocumentReference ref = db.collection("posts").document();
+        post.id = ref.getId();
+        ref.set(post)
+                .addOnSuccessListener(v -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onFailure("Post save failed: " + safeErrorMessage(e)));
+    }
+
+    private void ensureSignedIn(final OperationCallback callback) {
+        if (auth.getCurrentUser() != null) {
+            callback.onSuccess();
+            return;
+        }
+
+        auth.signInAnonymously()
+                .addOnSuccessListener(result -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onFailure("Authentication failed: " + safeErrorMessage(e)));
+    }
+
+    private String safeErrorMessage(Exception e) {
+        if (e == null || e.getMessage() == null || e.getMessage().trim().isEmpty()) {
+            return "Unknown error";
+        }
+        String message = e.getMessage().trim();
+        if (message.length() > 180) {
+            return message.substring(0, 180) + "...";
+        }
+        return message;
+    }
+
+    public void getPosts(final PostsCallback callback, final ErrorCallback errorCallback) {
         db.collection("posts")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        if (errorCallback != null) {
+                            errorCallback.onError(error.getMessage() != null ? error.getMessage() : "Failed to load posts");
+                        }
+                        return;
+                    }
                     List<Post> posts = new ArrayList<>();
                     if (snapshot != null) {
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
@@ -104,7 +188,8 @@ public class FirebaseManager {
     }
 
     public void listenForNearbyPosts(Context context) {
-        db.collection("posts")
+        stopNearbyPostsListener();
+        nearbyPostsListener = db.collection("posts")
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null || snapshots == null) return;
                     for (DocumentChange dc : snapshots.getDocumentChanges()) {
@@ -114,6 +199,13 @@ public class FirebaseManager {
                         }
                     }
                 });
+    }
+
+    public void stopNearbyPostsListener() {
+        if (nearbyPostsListener != null) {
+            nearbyPostsListener.remove();
+            nearbyPostsListener = null;
+        }
     }
 
     private void checkRadiusAndNotify(Context context, Post post) {
@@ -134,6 +226,11 @@ public class FirebaseManager {
 
 
     public interface PostsCallback { void onCallback(List<Post> posts); }
+    public interface ErrorCallback { void onError(String error); }
     public interface CommentsCallback { void onCallback(List<Comment> comments); }
     public interface LikesCallback { void onCallback(List<Like> likes); }
+    public interface OperationCallback {
+        void onSuccess();
+        void onFailure(String error);
+    }
 }
