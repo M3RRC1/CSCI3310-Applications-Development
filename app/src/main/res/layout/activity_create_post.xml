@@ -1,47 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#F5F5F5"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_create_post_background">
 
-    <ImageView
-        android:id="@+id/imagePreview"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:scaleType="centerInside"
-        app:layout_constraintBottom_toTopOf="@id/editTextPost"/>
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:padding="20dp">
 
-    <EditText
-        android:id="@+id/editTextPost"
-        android:hint="Write something..."
-        android:background="@drawable/textview_border"
-        android:minHeight="40dp"
-        android:maxLines="5"
-        android:layout_marginEnd="90dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
 
-    <ImageButton
-        android:id="@+id/buttonSelectImage"
-        android:src="@drawable/outline_add_24"
-        android:layout_width="45dp"
-        android:layout_height="45dp"
-        android:backgroundTint="@color/transparent"
-        app:layout_constraintTop_toTopOf="@id/editTextPost"
-        app:layout_constraintStart_toEndOf="@id/editTextPost"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="Create Post"
+                android:textColor="#0B1F3A"
+                android:textSize="30sp"
+                android:textStyle="bold" />
 
-    <ImageButton
-        android:id="@+id/buttonPost"
-        android:src="@drawable/outline_arrow_forward_ios_24"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="5dp"
-        android:background="@drawable/button"
-        app:layout_constraintTop_toTopOf="@id/editTextPost"
-        app:layout_constraintStart_toEndOf="@id/buttonSelectImage"/>
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="18dp"
+                android:text="Share a thought, a photo, or both."
+                android:textColor="#66788D"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_create_post_card"
+                android:elevation="10dp"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <ImageView
+                    android:id="@+id/imagePreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp"
+                    android:contentDescription="Selected image preview"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/bg_create_post_preview" />
+
+                <EditText
+                    android:id="@+id/editTextPost"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_create_post_input"
+                    android:gravity="top"
+                    android:hint="Write something..."
+                    android:inputType="textMultiLine"
+                    android:minHeight="120dp"
+                    android:padding="16dp"
+                    android:textColor="#0B1F3A"
+                    android:textColorHint="#7D94AA"
+                    android:fontFamily="sans-serif" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="end|center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/buttonSelectImage"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/button"
+                        android:contentDescription="Select image"
+                        android:padding="12dp"
+                        android:src="@drawable/outline_add_24"
+                        android:tint="@android:color/white" />
+
+                    <ImageButton
+                        android:id="@+id/buttonPost"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="12dp"
+                        android:background="@drawable/button"
+                        android:contentDescription="Post"
+                        android:padding="12dp"
+                        android:src="@drawable/outline_arrow_forward_ios_24"
+                        android:tint="@android:color/white" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>
