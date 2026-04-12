@@ -1,11 +1,12 @@
 package com.example.location_based_social_media.ui;
 
-import static androidx.browser.customtabs.CustomTabsClient.getPackageName;
-
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,8 +25,13 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class PostDetailFragment extends BottomSheetDialogFragment {
 
@@ -101,74 +107,112 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
             CommentFragment.newInstance(postId).show(getParentFragmentManager(), "comments");
         });
 
-        shareBtn.setOnClickListener(v->sharePost(currentPost));
+        shareBtn.setOnClickListener(v -> sharePost(currentPost));
         return view;
     }
 
     private void sharePost(Post post) {
-        if (post == null) return;
+        if (post == null) {
+            if (isAdded()) {
+                Toast.makeText(requireContext(), "Post is still loading", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
 
-        String shareText = post.text;
+        String shareText = post.text == null ? "" : post.text;
+
+        if (post.imageUri == null || post.imageUri.isEmpty()) {
+            shareTextOnly(shareText);
+            return;
+        }
+
+        shareImageAndText(post.imageUri, shareText);
+    }
+
+    private void shareTextOnly(String shareText) {
         Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        sendIntent.setType("text/plain");
 
-        if (post.imageUri != null && !post.imageUri.isEmpty()) {
-            Uri imageUri = Uri.parse(post.imageUri);
+        launchShareChooser(sendIntent);
+    }
 
-            if ("content".equals(imageUri.getScheme())) {
-                // Case 1: Local content URI (picked from gallery/camera)
+    private void shareImageAndText(String imageUrl, String shareText) {
+        if (!isAdded()) {
+            return;
+        }
+
+        Toast.makeText(requireContext(), "Preparing image...", Toast.LENGTH_SHORT).show();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                Uri sharedImageUri = copyRemoteImageToCache(imageUrl);
+                if (sharedImageUri == null) {
+                    postShareError("Unable to prepare image for sharing");
+                    return;
+                }
+
+                Intent sendIntent = new Intent(Intent.ACTION_SEND);
                 sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-                sendIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
+                sendIntent.putExtra(Intent.EXTRA_STREAM, sharedImageUri);
                 sendIntent.setType("image/*");
                 sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-                startActivity(Intent.createChooser(sendIntent, "Share post via"));
-
-            } else if ("http".equals(imageUri.getScheme()) || "https".equals(imageUri.getScheme())) {
-                // Case 2: Firebase Storage download URL
-                downloadAndShareImage(post.imageUri, shareText);
-                return; // Exit here, downloadAndShareImage will handle sharing
+                new Handler(Looper.getMainLooper()).post(() -> launchShareChooser(sendIntent));
+            } catch (Exception e) {
+                postShareError("Share failed: " + e.getMessage());
             }
-
-        } else {
-            // Case 3: Text only
-            sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-            sendIntent.setType("text/plain");
-
-            startActivity(Intent.createChooser(sendIntent, "Share post via"));
-        }
+        });
     }
 
-    private void downloadAndShareImage(String imageUrl, String shareText) {
-        StorageReference storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(imageUrl);
+    private Uri copyRemoteImageToCache(String imageUrl) throws IOException, InterruptedException, java.util.concurrent.ExecutionException {
+        Context context = requireContext().getApplicationContext();
+        File cacheDir = new File(context.getCacheDir(), "shared_images");
+        if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+            return null;
+        }
+
+        File sourceFile = Glide.with(context)
+                .asFile()
+                .load(imageUrl)
+                .submit()
+                .get();
+
+        File targetFile = new File(cacheDir, "shared_post_" + System.currentTimeMillis() + ".jpg");
+        try (InputStream inputStream = new FileInputStream(sourceFile);
+             OutputStream outputStream = new FileOutputStream(targetFile)) {
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
+        }
+
+        return FileProvider.getUriForFile(context, context.getPackageName() + ".fileprovider", targetFile);
+    }
+
+    private void launchShareChooser(Intent sendIntent) {
+        if (!isAdded()) {
+            return;
+        }
 
         try {
-            File localFile = File.createTempFile("shared_image", ".jpg", requireContext().getCacheDir());
-            storageRef.getFile(localFile)
-                    .addOnSuccessListener(taskSnapshot -> {
-                        shareImageWithText(localFile, shareText);
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(requireContext(), "Failed to download image", Toast.LENGTH_SHORT).show();
-                    });
-        } catch (IOException e) {
-            e.printStackTrace();
+            Intent shareIntent = Intent.createChooser(sendIntent, "Share post via");
+            if (shareIntent.resolveActivity(requireContext().getPackageManager()) != null) {
+                startActivity(shareIntent);
+            } else {
+                Toast.makeText(requireContext(), "No app available to share this content", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(requireContext(), "Unable to open share menu", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void shareImageWithText(File imageFile, String shareText) {
-        Uri uri = FileProvider.getUriForFile(
-                requireContext(),
-                requireContext().getPackageName() + ".provider",
-                imageFile
-        );
-
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
-        shareIntent.setType("image/*");
-        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-        startActivity(Intent.createChooser(shareIntent, "Share post via"));
+    private void postShareError(String message) {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            if (isAdded()) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private String formatUserLabel(String userId) {
