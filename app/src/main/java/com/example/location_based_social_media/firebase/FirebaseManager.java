@@ -140,12 +140,14 @@ public class FirebaseManager {
                 .whereEqualTo("postId", postId)
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null) {
+                        return;
+                    }
+
                     List<Comment> comments = new ArrayList<>();
-                    if (snapshot != null) {
-                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                            Comment c = doc.toObject(Comment.class);
-                            if (c != null) comments.add(c);
-                        }
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        Comment c = doc.toObject(Comment.class);
+                        if (c != null) comments.add(c);
                     }
                     callback.onCallback(comments);
                 });
