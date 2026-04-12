@@ -1,33 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="16dp"
+    android:background="#F5F5F5"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
-    <EditText
-        android:id="@+id/editTextPost"
-        android:hint="Write something..."
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
 
     <ImageView
         android:id="@+id/imagePreview"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:scaleType="centerCrop"/>
+        android:layout_height="0dp"
+        android:scaleType="centerInside"
+        app:layout_constraintBottom_toTopOf="@id/editTextPost"/>
 
-    <Button
+    <EditText
+        android:id="@+id/editTextPost"
+        android:hint="Write something..."
+        android:background="@drawable/textview_border"
+        android:minHeight="40dp"
+        android:maxLines="5"
+        android:layout_marginEnd="90dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+    <ImageButton
         android:id="@+id/buttonSelectImage"
-        android:text="Add Image"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:src="@drawable/outline_add_24"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:backgroundTint="@color/transparent"
+        app:layout_constraintTop_toTopOf="@id/editTextPost"
+        app:layout_constraintStart_toEndOf="@id/editTextPost"/>
 
-    <Button
+    <ImageButton
         android:id="@+id/buttonPost"
-        android:text="Post"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-</LinearLayout>
+        android:src="@drawable/outline_arrow_forward_ios_24"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/button"
+        app:layout_constraintTop_toTopOf="@id/editTextPost"
+        app:layout_constraintStart_toEndOf="@id/buttonSelectImage"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

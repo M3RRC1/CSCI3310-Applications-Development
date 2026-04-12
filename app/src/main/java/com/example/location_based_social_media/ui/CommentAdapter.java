@@ -19,7 +19,8 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
     private List<Comment> comments = new ArrayList<>();
 
     public void setComments(List<Comment> comments) {
-        this.comments = comments;
+        this.comments.clear();
+        this.comments.addAll(comments);
         notifyDataSetChanged();
     }
 

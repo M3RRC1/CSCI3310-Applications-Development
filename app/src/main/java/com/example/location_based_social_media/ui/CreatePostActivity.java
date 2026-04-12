@@ -32,7 +32,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private EditText editTextPost;
     private ImageView imagePreview;
     private Uri imageUri;
-    private Button buttonPost;
+    private ImageButton buttonPost;
     private boolean isPosting = false;
     private int activePostRequestId = 0;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -48,7 +48,7 @@ public class CreatePostActivity extends AppCompatActivity {
 
         editTextPost = findViewById(R.id.editTextPost);
         imagePreview = findViewById(R.id.imagePreview);
-        Button buttonSelectImage = findViewById(R.id.buttonSelectImage);
+        ImageButton buttonSelectImage = findViewById(R.id.buttonSelectImage);
         buttonPost = findViewById(R.id.buttonPost);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -160,7 +160,6 @@ public class CreatePostActivity extends AppCompatActivity {
     private void setPostingState(boolean posting) {
         isPosting = posting;
         buttonPost.setEnabled(!posting);
-        buttonPost.setText(posting ? "Posting..." : "Post");
         if (!posting && postingTimeoutRunnable != null) {
             uiHandler.removeCallbacks(postingTimeoutRunnable);
         }

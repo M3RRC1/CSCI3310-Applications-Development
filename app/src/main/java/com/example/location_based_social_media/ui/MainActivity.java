@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private GoogleMap mMap;
     private FirebaseManager firebaseManager;
     private Location currentLocation;
-    private float radiusInMeters = 100000f;
+    private float radiusInMeters = 100f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 mMap.addCircle(new CircleOptions()
                         .center(userLatLng)
                         .radius(radiusInMeters)
-                        .strokeWidth(2f)
+                        .strokeWidth(20f)
                         .strokeColor(0x550000FF)
                         .fillColor(0x220000FF));
 
