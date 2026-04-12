@@ -36,12 +36,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Sign In"
+        android:backgroundTint="@color/blue"
         android:layout_marginTop="20dp" />
 
     <Button
         android:id="@+id/buttonRegister"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:backgroundTint="@color/blue"
         android:text="Create Account"
         android:layout_marginTop="12dp" />
 

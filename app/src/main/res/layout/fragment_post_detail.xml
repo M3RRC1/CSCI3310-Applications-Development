@@ -15,7 +15,7 @@
             android:layout_width="match_parent"
             android:layout_height="240dp"
             android:contentDescription="Post Image"
-            android:scaleType="centerCrop" />
+            android:scaleType="centerInside" />
 
         <TextView
             android:id="@+id/post_text"

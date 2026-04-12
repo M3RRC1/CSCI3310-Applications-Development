@@ -24,10 +24,14 @@ public class FirebaseManager {
     private final FirebaseStorage storage = FirebaseStorage.getInstance();
     private ListenerRegistration nearbyPostsListener;
     private Location currentLocation;
-    private float radiusInMeters = 1000f;
+    private float radiusInMeters = 100f;
 
     public void setCurrentLocation(Location location) {
         this.currentLocation = location;
+    }
+
+    public void setRadiusInMeters(float radiusInMeters) {
+        this.radiusInMeters = radiusInMeters;
     }
 
     public String getUserId() {
@@ -140,12 +144,14 @@ public class FirebaseManager {
                 .whereEqualTo("postId", postId)
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null) {
+                        return;
+                    }
+
                     List<Comment> comments = new ArrayList<>();
-                    if (snapshot != null) {
-                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
-                            Comment c = doc.toObject(Comment.class);
-                            if (c != null) comments.add(c);
-                        }
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        Comment c = doc.toObject(Comment.class);
+                        if (c != null) comments.add(c);
                     }
                     callback.onCallback(comments);
                 });

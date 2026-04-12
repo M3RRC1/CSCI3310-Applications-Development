@@ -32,7 +32,7 @@ public class CreatePostActivity extends AppCompatActivity {
     private EditText editTextPost;
     private ImageView imagePreview;
     private Uri imageUri;
-    private Button buttonPost;
+    private ImageButton buttonPost;
     private boolean isPosting = false;
     private int activePostRequestId = 0;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -48,7 +48,7 @@ public class CreatePostActivity extends AppCompatActivity {
 
         editTextPost = findViewById(R.id.editTextPost);
         imagePreview = findViewById(R.id.imagePreview);
-        Button buttonSelectImage = findViewById(R.id.buttonSelectImage);
+        ImageButton buttonSelectImage = findViewById(R.id.buttonSelectImage);
         buttonPost = findViewById(R.id.buttonPost);
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -100,6 +100,16 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void requestCurrentLocationAndSubmit(String text, int requestId) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            // Permission not granted → bail out gracefully
+            Toast.makeText(this, "Location permission not granted", Toast.LENGTH_SHORT).show();
+            setPostingState(false);
+            return;
+        }
+
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
             .addOnSuccessListener(location -> {
                 if (requestId != activePostRequestId) return;
@@ -160,7 +170,6 @@ public class CreatePostActivity extends AppCompatActivity {
     private void setPostingState(boolean posting) {
         isPosting = posting;
         buttonPost.setEnabled(!posting);
-        buttonPost.setText(posting ? "Posting..." : "Post");
         if (!posting && postingTimeoutRunnable != null) {
             uiHandler.removeCallbacks(postingTimeoutRunnable);
         }
