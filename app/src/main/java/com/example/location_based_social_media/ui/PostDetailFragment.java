@@ -95,11 +95,31 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
             }
         });
 
-        // Load likes
-        likesListener = firebaseManager.getLikes(postId, likes -> likesView.setText(String.valueOf(likes.size())));
+        // Load likes and keep local "liked" state in sync with backend data.
+        likesListener = firebaseManager.getLikes(postId, likes -> {
+            likesView.setText(String.valueOf(likes.size()));
+            String uid = firebaseManager.getUserId();
+            boolean userLiked = false;
+            if (uid != null && !uid.trim().isEmpty()) {
+                for (Like like : likes) {
+                    if (uid.equals(like.userId)) {
+                        userLiked = true;
+                        break;
+                    }
+                }
+            }
+            liked = userLiked;
+            likeBtn.setColorFilter(liked ? Color.RED : Color.WHITE);
+        });
 
         likeBtn.setOnClickListener(v -> {
             String uid = firebaseManager.getUserId();
+            if (uid == null || uid.trim().isEmpty()) {
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Please sign in before liking", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
             if (!liked) {
                 firebaseManager.addLike(postId, uid);
                 liked = true;
