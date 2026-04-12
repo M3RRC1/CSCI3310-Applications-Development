@@ -20,6 +20,7 @@ import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.example.location_based_social_media.Notifications.NotificationHelper;
 import com.example.location_based_social_media.location.LocationHelper;
+import com.google.android.gms.location.LocationCallback;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.android.gms.maps.*;
 import com.google.android.gms.maps.model.*;
@@ -39,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Circle detectionRadiusCircle;
     private TextView textRadius;
     private SeekBar seekRadius;
+    private LocationCallback locationCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -151,6 +153,24 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 loadPosts();
             }
         });
+
+        startLocationTracking();
+    }
+
+    private void startLocationTracking() {
+        if (locationCallback != null) {
+            return;
+        }
+
+        locationCallback = LocationHelper.startLocationUpdates(this, location -> {
+            currentLocation = location;
+            firebaseManager.setCurrentLocation(location);
+            updateDetectionRadiusCircle();
+
+            if (mMap != null) {
+                loadPosts();
+            }
+        });
     }
 
     private void loadPosts() {
@@ -217,6 +237,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         super.onResume();
         if (mMap != null) {
             loadPosts();
+            startLocationTracking();
         }
         firebaseManager.listenForNearbyPosts(this);
     }
@@ -225,6 +246,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onPause() {
         super.onPause();
         firebaseManager.stopNearbyPostsListener();
+        LocationHelper.stopLocationUpdates(this, locationCallback);
+        locationCallback = null;
     }
 
     @Override
