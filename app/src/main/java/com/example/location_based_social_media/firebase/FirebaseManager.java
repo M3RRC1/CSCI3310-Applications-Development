@@ -134,9 +134,23 @@ public class FirebaseManager {
     }
 
     public void addComment(Comment comment) {
+        addComment(comment, null);
+    }
+
+    public void addComment(Comment comment, OperationCallback callback) {
         DocumentReference ref = db.collection("comments").document();
         comment.id = ref.getId();
-        ref.set(comment);
+        ref.set(comment)
+                .addOnSuccessListener(v -> {
+                    if (callback != null) {
+                        callback.onSuccess();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (callback != null) {
+                        callback.onFailure("Comment save failed: " + safeErrorMessage(e));
+                    }
+                });
     }
 
     public ListenerRegistration getComments(String postId, final CommentsCallback callback) {

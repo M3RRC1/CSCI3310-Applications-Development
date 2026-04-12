@@ -14,6 +14,7 @@ import com.example.location_based_social_media.R;
 import com.example.location_based_social_media.data.Comment;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.List;
 
@@ -22,6 +23,8 @@ public class CommentFragment extends BottomSheetDialogFragment {
     private String postId;
     private FirebaseManager firebaseManager;
     private CommentAdapter adapter;
+    private RecyclerView recyclerView;
+    private ListenerRegistration commentsListener;
 
     public static CommentFragment newInstance(String postId) {
         CommentFragment fragment = new CommentFragment();
@@ -42,7 +45,7 @@ public class CommentFragment extends BottomSheetDialogFragment {
 
         if (getArguments() != null) postId = getArguments().getString("postId");
 
-        RecyclerView recyclerView = view.findViewById(R.id.recycler_comments);
+        recyclerView = view.findViewById(R.id.recycler_comments);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         adapter = new CommentAdapter();
@@ -59,14 +62,39 @@ public class CommentFragment extends BottomSheetDialogFragment {
                 comment.userId = firebaseManager.getUserId();
                 comment.postId = postId;
                 comment.timestamp = System.currentTimeMillis();
-                firebaseManager.addComment(comment);
-                editComment.setText("");
+                firebaseManager.addComment(comment, new FirebaseManager.OperationCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (!isAdded()) {
+                            return;
+                        }
+                        adapter.addComment(comment);
+                        recyclerView.scrollToPosition(adapter.getItemCount() - 1);
+                        editComment.setText("");
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        if (isAdded()) {
+                            Toast.makeText(requireContext(), "Failed to send comment: " + error, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
             }
         });
 
         // Load comments
-        firebaseManager.getComments(postId, comments -> adapter.setComments(comments));
+        commentsListener = firebaseManager.getComments(postId, comments -> adapter.setComments(comments));
 
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (commentsListener != null) {
+            commentsListener.remove();
+            commentsListener = null;
+        }
+        super.onDestroyView();
     }
 }
