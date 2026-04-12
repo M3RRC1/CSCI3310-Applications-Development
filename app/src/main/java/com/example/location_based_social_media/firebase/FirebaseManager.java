@@ -24,10 +24,14 @@ public class FirebaseManager {
     private final FirebaseStorage storage = FirebaseStorage.getInstance();
     private ListenerRegistration nearbyPostsListener;
     private Location currentLocation;
-    private float radiusInMeters = 1000f;
+    private float radiusInMeters = 100f;
 
     public void setCurrentLocation(Location location) {
         this.currentLocation = location;
+    }
+
+    public void setRadiusInMeters(float radiusInMeters) {
+        this.radiusInMeters = radiusInMeters;
     }
 
     public String getUserId() {

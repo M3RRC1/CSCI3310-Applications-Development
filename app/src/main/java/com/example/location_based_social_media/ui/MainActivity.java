@@ -2,10 +2,13 @@ package com.example.location_based_social_media.ui;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,10 +26,19 @@ import com.google.android.gms.maps.model.*;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
+    private static final String PREFS_NAME = "location_settings";
+    private static final String KEY_RADIUS_METERS = "radius_meters";
+    private static final int MIN_RADIUS_METERS = 100;
+    private static final int MAX_RADIUS_METERS = 2000;
+    private static final int RADIUS_STEP_METERS = 100;
+
     private GoogleMap mMap;
     private FirebaseManager firebaseManager;
     private Location currentLocation;
     private float radiusInMeters = 100f;
+    private Circle detectionRadiusCircle;
+    private TextView textRadius;
+    private SeekBar seekRadius;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,10 +52,42 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         setContentView(R.layout.activity_main);
 
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        radiusInMeters = prefs.getInt(KEY_RADIUS_METERS, MIN_RADIUS_METERS);
+
         firebaseManager = new FirebaseManager();
+        firebaseManager.setRadiusInMeters(radiusInMeters);
 
         Button buttonAddPost = findViewById(R.id.buttonAddPost);
         Button buttonSignOut = findViewById(R.id.buttonSignOut);
+        textRadius = findViewById(R.id.textRadius);
+        seekRadius = findViewById(R.id.seekRadius);
+
+        seekRadius.setMax((MAX_RADIUS_METERS - MIN_RADIUS_METERS) / RADIUS_STEP_METERS);
+        seekRadius.setProgress(progressFromRadius((int) radiusInMeters));
+        updateRadiusLabel();
+        seekRadius.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                radiusInMeters = radiusFromProgress(progress);
+                firebaseManager.setRadiusInMeters(radiusInMeters);
+                updateRadiusLabel();
+                updateDetectionRadiusCircle();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                prefs.edit().putInt(KEY_RADIUS_METERS, (int) radiusInMeters).apply();
+                if (mMap != null) {
+                    loadPosts();
+                }
+            }
+        });
+
         buttonAddPost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
         buttonSignOut.setOnClickListener(v -> {
             firebaseManager.stopNearbyPostsListener();
@@ -99,12 +143,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 15f));
 
                 // draw radius circle
-                mMap.addCircle(new CircleOptions()
-                        .center(userLatLng)
-                        .radius(radiusInMeters)
-                        .strokeWidth(20f)
-                        .strokeColor(0x550000FF)
-                        .fillColor(0x220000FF));
+                updateDetectionRadiusCircle();
 
                 loadPosts();
             } else {
@@ -118,6 +157,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (mMap == null) return;
         firebaseManager.getPosts(posts -> {
             mMap.clear();
+            detectionRadiusCircle = null;
+            updateDetectionRadiusCircle();
             for (Post post : posts) {
                 float[] distance = new float[1];
                 if (currentLocation != null) {
@@ -139,6 +180,36 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
         }, error -> Toast.makeText(this, "Load posts failed: " + error, Toast.LENGTH_LONG).show());
+    }
+
+    private void updateDetectionRadiusCircle() {
+        if (mMap == null || currentLocation == null) {
+            return;
+        }
+
+        if (detectionRadiusCircle != null) {
+            detectionRadiusCircle.remove();
+        }
+
+        detectionRadiusCircle = mMap.addCircle(new CircleOptions()
+                .center(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))
+                .radius(radiusInMeters)
+                .strokeWidth(6f)
+                .strokeColor(0x550000FF)
+                .fillColor(0x220000FF));
+    }
+
+    private void updateRadiusLabel() {
+        textRadius.setText(getString(R.string.detection_radius_label, (int) radiusInMeters));
+    }
+
+    private int radiusFromProgress(int progress) {
+        return MIN_RADIUS_METERS + (progress * RADIUS_STEP_METERS);
+    }
+
+    private int progressFromRadius(int radiusMeters) {
+        int clamped = Math.max(MIN_RADIUS_METERS, Math.min(MAX_RADIUS_METERS, radiusMeters));
+        return (clamped - MIN_RADIUS_METERS) / RADIUS_STEP_METERS;
     }
 
     @Override
