@@ -239,7 +239,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             loadPosts();
             startLocationTracking();
         }
-        firebaseManager.listenForNearbyPosts(this);
     }
 
     @Override

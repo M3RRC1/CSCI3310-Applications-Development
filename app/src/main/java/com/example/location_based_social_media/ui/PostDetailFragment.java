@@ -21,6 +21,8 @@ import com.example.location_based_social_media.data.Like;
 import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
 import java.io.FileInputStream;
