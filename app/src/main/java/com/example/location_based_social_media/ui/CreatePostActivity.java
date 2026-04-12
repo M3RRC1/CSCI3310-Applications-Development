@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.widget.*;
 
 import androidx.annotation.NonNull;
@@ -24,6 +25,8 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 
 public class CreatePostActivity extends AppCompatActivity {
+
+    private static final String TAG = "CreatePostActivity";
 
     private static final int PICK_IMAGE = 1;
     private static final int LOCATION_PERMISSION_REQUEST = 2001;
@@ -69,12 +72,14 @@ public class CreatePostActivity extends AppCompatActivity {
 
         String text = editTextPost.getText().toString().trim();
         if (text.isEmpty()) {
+            Log.w(TAG, "Please enter post text");
             Toast.makeText(this, "Please enter post text", Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "Location permission is required to create a post");
             ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST);
             return;
@@ -95,6 +100,7 @@ public class CreatePostActivity extends AppCompatActivity {
             })
             .addOnFailureListener(e -> {
                 if (requestId != activePostRequestId) return;
+                Log.e(TAG, "Failed to get location", e);
                 requestCurrentLocationAndSubmit(text, requestId);
             });
     }
@@ -106,6 +112,7 @@ public class CreatePostActivity extends AppCompatActivity {
                         != PackageManager.PERMISSION_GRANTED) {
             // Permission not granted → bail out gracefully
             Toast.makeText(this, "Location permission not granted", Toast.LENGTH_SHORT).show();
+            Log.w(TAG, "Location permission not granted");
             setPostingState(false);
             return;
         }
@@ -116,12 +123,14 @@ public class CreatePostActivity extends AppCompatActivity {
                 if (location != null) {
                     submitPost(text, location, requestId);
                 } else {
+                    Log.w(TAG, "Location not available");
                     Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show();
                     setPostingState(false);
                 }
             })
             .addOnFailureListener(e -> {
                 if (requestId != activePostRequestId) return;
+                Log.e(TAG, "Failed to get location", e);
                 Toast.makeText(this, "Failed to get location", Toast.LENGTH_LONG).show();
                 setPostingState(false);
             });
@@ -148,6 +157,7 @@ public class CreatePostActivity extends AppCompatActivity {
             @Override
             public void onFailure(String error) {
                 if (requestId != activePostRequestId) return;
+                Log.e(TAG, error);
                 Toast.makeText(CreatePostActivity.this, error, Toast.LENGTH_LONG).show();
                 setPostingState(false);
             }
@@ -160,6 +170,7 @@ public class CreatePostActivity extends AppCompatActivity {
         }
         postingTimeoutRunnable = () -> {
             if (requestId == activePostRequestId && isPosting) {
+                Log.w(TAG, "Posting timed out. Check network and try again.");
                 Toast.makeText(this, "Posting timed out. Check network and try again.", Toast.LENGTH_LONG).show();
                 setPostingState(false);
             }

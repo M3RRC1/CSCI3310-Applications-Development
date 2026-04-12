@@ -112,8 +112,8 @@ public class FirebaseManager {
         return message;
     }
 
-    public void getPosts(final PostsCallback callback, final ErrorCallback errorCallback) {
-        db.collection("posts")
+    public ListenerRegistration getPosts(final PostsCallback callback, final ErrorCallback errorCallback) {
+        return db.collection("posts")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
@@ -139,8 +139,8 @@ public class FirebaseManager {
         ref.set(comment);
     }
 
-    public void getComments(String postId, final CommentsCallback callback) {
-        db.collection("comments")
+    public ListenerRegistration getComments(String postId, final CommentsCallback callback) {
+        return db.collection("comments")
                 .whereEqualTo("postId", postId)
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener((snapshot, error) -> {
@@ -178,8 +178,8 @@ public class FirebaseManager {
                 });
     }
 
-    public void getLikes(String postId, final LikesCallback callback) {
-        db.collection("likes")
+    public ListenerRegistration getLikes(String postId, final LikesCallback callback) {
+        return db.collection("likes")
                 .whereEqualTo("postId", postId)
                 .addSnapshotListener((snapshot, error) -> {
                     List<Like> likes = new ArrayList<>();

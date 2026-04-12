@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,8 +22,7 @@ import com.example.location_based_social_media.data.Like;
 import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,11 +35,15 @@ import java.util.concurrent.Executors;
 
 public class PostDetailFragment extends BottomSheetDialogFragment {
 
+    private static final String TAG = "PostDetailFragment";
+
     private String postId;
     private boolean liked;
     private FirebaseManager firebaseManager;
     private TextView likesView;
     private Post currentPost;
+    private ListenerRegistration postsListener;
+    private ListenerRegistration likesListener;
 
     public static PostDetailFragment newInstance(String postId) {
         PostDetailFragment fragment = new PostDetailFragment();
@@ -69,7 +73,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
         if (getArguments() != null) postId = getArguments().getString("postId");
 
         // Load post
-        firebaseManager.getPosts(posts -> {
+        postsListener = firebaseManager.getPosts(posts -> {
             for (Post post : posts) {
                 if (post.id.equals(postId)) {
                     currentPost = post;
@@ -82,13 +86,17 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
                 }
             }
         }, error -> {
+            if (!isAdded() || !isVisible() || firebaseManager.getUserId().isEmpty()) {
+                return;
+            }
             if (isAdded()) {
+                Log.e(TAG, "Load post failed: " + error);
                 Toast.makeText(requireContext(), "Load post failed: " + error, Toast.LENGTH_LONG).show();
             }
         });
 
         // Load likes
-        firebaseManager.getLikes(postId, likes -> likesView.setText(String.valueOf(likes.size())));
+        likesListener = firebaseManager.getLikes(postId, likes -> likesView.setText(String.valueOf(likes.size())));
 
         likeBtn.setOnClickListener(v -> {
             String uid = firebaseManager.getUserId();
@@ -111,9 +119,36 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
         return view;
     }
 
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (postsListener != null) {
+            postsListener.remove();
+            postsListener = null;
+        }
+        if (likesListener != null) {
+            likesListener.remove();
+            likesListener = null;
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (postsListener != null) {
+            postsListener.remove();
+            postsListener = null;
+        }
+        if (likesListener != null) {
+            likesListener.remove();
+            likesListener = null;
+        }
+    }
+
     private void sharePost(Post post) {
         if (post == null) {
             if (isAdded()) {
+                Log.w(TAG, "Post is still loading");
                 Toast.makeText(requireContext(), "Post is still loading", Toast.LENGTH_SHORT).show();
             }
             return;
@@ -147,6 +182,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
             try {
                 Uri sharedImageUri = copyRemoteImageToCache(imageUrl);
                 if (sharedImageUri == null) {
+                    Log.e(TAG, "Unable to prepare image for sharing");
                     postShareError("Unable to prepare image for sharing");
                     return;
                 }
@@ -159,6 +195,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
 
                 new Handler(Looper.getMainLooper()).post(() -> launchShareChooser(sendIntent));
             } catch (Exception e) {
+                Log.e(TAG, "Share failed: " + e.getMessage(), e);
                 postShareError("Share failed: " + e.getMessage());
             }
         });
@@ -200,9 +237,11 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
             if (shareIntent.resolveActivity(requireContext().getPackageManager()) != null) {
                 startActivity(shareIntent);
             } else {
+                Log.w(TAG, "No app available to share this content");
                 Toast.makeText(requireContext(), "No app available to share this content", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
+            Log.e(TAG, "Unable to open share menu", e);
             Toast.makeText(requireContext(), "Unable to open share menu", Toast.LENGTH_SHORT).show();
         }
     }
@@ -210,6 +249,7 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
     private void postShareError(String message) {
         new Handler(Looper.getMainLooper()).post(() -> {
             if (isAdded()) {
+                Log.e(TAG, message);
                 Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
             }
         });
