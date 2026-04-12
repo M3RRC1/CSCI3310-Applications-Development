@@ -1,5 +1,7 @@
 package com.example.location_based_social_media.ui;
 
+import static androidx.browser.customtabs.CustomTabsClient.getPackageName;
+
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -10,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.*;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
 
 import com.bumptech.glide.Glide;
 import com.example.location_based_social_media.R;
@@ -17,7 +20,11 @@ import com.example.location_based_social_media.data.Like;
 import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 public class PostDetailFragment extends BottomSheetDialogFragment {
@@ -101,32 +108,67 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
     private void sharePost(Post post) {
         if (post == null) return;
 
-        // Share text
         String shareText = post.text;
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
 
-        Uri imageUri = null;
         if (post.imageUri != null && !post.imageUri.isEmpty()) {
-            imageUri = Uri.parse(post.imageUri);
-        }
+            Uri imageUri = Uri.parse(post.imageUri);
 
-        Intent sendIntent = new Intent();
-        sendIntent.setAction(Intent.ACTION_SEND);
+            if ("content".equals(imageUri.getScheme())) {
+                // Case 1: Local content URI (picked from gallery/camera)
+                sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+                sendIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
+                sendIntent.setType("image/*");
+                sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-        if (imageUri != null) {
-            // Share text + image
-            sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-            sendIntent.putExtra(Intent.EXTRA_STREAM, imageUri);
-            sendIntent.setType("image/*");
-            sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                startActivity(Intent.createChooser(sendIntent, "Share post via"));
+
+            } else if ("http".equals(imageUri.getScheme()) || "https".equals(imageUri.getScheme())) {
+                // Case 2: Firebase Storage download URL
+                downloadAndShareImage(post.imageUri, shareText);
+                return; // Exit here, downloadAndShareImage will handle sharing
+            }
+
         } else {
-            // Share text only
+            // Case 3: Text only
             sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
             sendIntent.setType("text/plain");
-        }
 
-        // Show chooser
-        Intent shareIntent = Intent.createChooser(sendIntent, "Share post via");
-        startActivity(shareIntent);
+            startActivity(Intent.createChooser(sendIntent, "Share post via"));
+        }
+    }
+
+    private void downloadAndShareImage(String imageUrl, String shareText) {
+        StorageReference storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(imageUrl);
+
+        try {
+            File localFile = File.createTempFile("shared_image", ".jpg", requireContext().getCacheDir());
+            storageRef.getFile(localFile)
+                    .addOnSuccessListener(taskSnapshot -> {
+                        shareImageWithText(localFile, shareText);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(), "Failed to download image", Toast.LENGTH_SHORT).show();
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void shareImageWithText(File imageFile, String shareText) {
+        Uri uri = FileProvider.getUriForFile(
+                requireContext(),
+                requireContext().getPackageName() + ".provider",
+                imageFile
+        );
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        shareIntent.setType("image/*");
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        startActivity(Intent.createChooser(shareIntent, "Share post via"));
     }
 
     private String formatUserLabel(String userId) {

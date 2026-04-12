@@ -218,7 +218,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (mMap != null) {
             loadPosts();
         }
-        firebaseManager.listenForNearbyPosts(this);
     }
 
     @Override
