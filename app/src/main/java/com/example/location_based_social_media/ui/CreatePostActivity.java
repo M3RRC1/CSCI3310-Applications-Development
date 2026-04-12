@@ -100,6 +100,16 @@ public class CreatePostActivity extends AppCompatActivity {
     }
 
     private void requestCurrentLocationAndSubmit(String text, int requestId) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        != PackageManager.PERMISSION_GRANTED) {
+            // Permission not granted → bail out gracefully
+            Toast.makeText(this, "Location permission not granted", Toast.LENGTH_SHORT).show();
+            setPostingState(false);
+            return;
+        }
+
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
             .addOnSuccessListener(location -> {
                 if (requestId != activePostRequestId) return;
