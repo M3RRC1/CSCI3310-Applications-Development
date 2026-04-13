@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
-        mMap.setMinZoomPreference(12f);
+        mMap.setMinZoomPreference(14f);
 
         // Marker click
         mMap.setOnMarkerClickListener(marker -> {
@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                     marker.setTag(post);
                 }
             }
-        }, error -> Toast.makeText(this, "Load posts failed: " + error, Toast.LENGTH_LONG).show());
+        }, error -> Toast.makeText(this, "Load posts failed: " + error, Toast.LENGTH_SHORT).show());
     }
 
     private void updateDetectionRadiusCircle() {
@@ -244,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onPause() {
         super.onPause();
-        firebaseManager.stopNearbyPostsListener();
+        //firebaseManager.stopNearbyPostsListener();
         LocationHelper.stopLocationUpdates(this, locationCallback);
         locationCallback = null;
     }
