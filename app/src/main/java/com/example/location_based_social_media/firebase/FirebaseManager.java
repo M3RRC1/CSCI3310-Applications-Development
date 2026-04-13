@@ -14,7 +14,9 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class FirebaseManager {
@@ -112,8 +114,8 @@ public class FirebaseManager {
         return message;
     }
 
-    public void getPosts(final PostsCallback callback, final ErrorCallback errorCallback) {
-        db.collection("posts")
+    public ListenerRegistration getPosts(final PostsCallback callback, final ErrorCallback errorCallback) {
+        return db.collection("posts")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
@@ -134,13 +136,27 @@ public class FirebaseManager {
     }
 
     public void addComment(Comment comment) {
-        DocumentReference ref = db.collection("comments").document();
-        comment.id = ref.getId();
-        ref.set(comment);
+        addComment(comment, null);
     }
 
-    public void getComments(String postId, final CommentsCallback callback) {
-        db.collection("comments")
+    public void addComment(Comment comment, OperationCallback callback) {
+        DocumentReference ref = db.collection("comments").document();
+        comment.id = ref.getId();
+        ref.set(comment)
+                .addOnSuccessListener(v -> {
+                    if (callback != null) {
+                        callback.onSuccess();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (callback != null) {
+                        callback.onFailure("Comment save failed: " + safeErrorMessage(e));
+                    }
+                });
+    }
+
+    public ListenerRegistration getComments(String postId, final CommentsCallback callback) {
+        return db.collection("comments")
                 .whereEqualTo("postId", postId)
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener((snapshot, error) -> {
@@ -158,13 +174,17 @@ public class FirebaseManager {
     }
 
     public void addLike(String postId, String userId) {
-        DocumentReference ref = db.collection("likes").document();
+        DocumentReference ref = db.collection("likes").document(likeDocumentId(postId, userId));
         Like like = new Like(postId, userId);
         like.id = ref.getId();
         ref.set(like);
     }
 
     public void removeLike(String postId, String userId) {
+        String likeDocId = likeDocumentId(postId, userId);
+        db.collection("likes").document(likeDocId).delete();
+
+        // Cleanup legacy duplicates created before deterministic IDs.
         db.collection("likes")
                 .whereEqualTo("postId", postId)
                 .whereEqualTo("userId", userId)
@@ -178,19 +198,29 @@ public class FirebaseManager {
                 });
     }
 
-    public void getLikes(String postId, final LikesCallback callback) {
-        db.collection("likes")
+    public ListenerRegistration getLikes(String postId, final LikesCallback callback) {
+        return db.collection("likes")
                 .whereEqualTo("postId", postId)
                 .addSnapshotListener((snapshot, error) -> {
                     List<Like> likes = new ArrayList<>();
+                    Set<String> seenUsers = new HashSet<>();
                     if (snapshot != null) {
                         for (DocumentSnapshot doc : snapshot.getDocuments()) {
                             Like l = doc.toObject(Like.class);
-                            if (l != null) likes.add(l);
+                            if (l == null || l.userId == null || l.userId.trim().isEmpty()) {
+                                continue;
+                            }
+                            if (seenUsers.add(l.userId)) {
+                                likes.add(l);
+                            }
                         }
                     }
                     callback.onCallback(likes);
                 });
+    }
+
+    private String likeDocumentId(String postId, String userId) {
+        return postId + "_" + userId;
     }
 
     public void listenForNearbyPosts(Context context) {

@@ -24,6 +24,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.ViewHold
         notifyDataSetChanged();
     }
 
+    public void addComment(Comment comment) {
+        comments.add(comment);
+        notifyItemInserted(comments.size() - 1);
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

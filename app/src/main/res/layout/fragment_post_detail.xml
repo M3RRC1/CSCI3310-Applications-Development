@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -10,65 +11,97 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/post_image"
-            android:layout_width="match_parent"
-            android:layout_height="240dp"
-            android:contentDescription="Post Image"
-            android:scaleType="centerInside" />
-
-        <TextView
-            android:id="@+id/post_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/post_user"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textSize="13sp" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/button_like"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Like"
-                android:src="@drawable/baseline_thumb_up_24" />
+            android:background="@drawable/bg_surface_card"
+            android:elevation="8dp"
+            android:orientation="vertical"
+            android:padding="16dp">
 
             <TextView
-                android:id="@+id/like_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="0"
+                android:fontFamily="sans-serif-medium"
+                android:text="Post"
+                android:textColor="#0B1F3A"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/post_image"
+                android:layout_width="match_parent"
+                android:layout_height="240dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_create_post_preview"
+                android:contentDescription="Post Image"
+                android:scaleType="centerCrop" />
+
+            <TextView
+                android:id="@+id/post_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:textColor="#0B1F3A"
                 android:textSize="16sp" />
 
-            <ImageButton
-                android:id="@+id/button_comment"
-                android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/post_user"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/outline_add_comment_24" />
+                android:layout_marginTop="6dp"
+                android:textColor="#66788D"
+                android:textSize="13sp" />
 
-            <ImageButton
-                android:id="@+id/button_share"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="15dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/outline_arrow_outward_24" />
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/button_like"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/button"
+                    android:contentDescription="Like"
+                    android:padding="12dp"
+                    android:src="@drawable/baseline_thumb_up_24"
+                    android:tint="@android:color/white" />
+
+                <TextView
+                    android:id="@+id/like_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="0"
+                    android:textColor="#0B1F3A"
+                    android:textSize="16sp" />
+
+                <ImageButton
+                    android:id="@+id/button_comment"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="16dp"
+                    android:background="@drawable/button"
+                    android:contentDescription="Comment"
+                    android:padding="12dp"
+                    android:src="@drawable/outline_add_comment_24"
+                    android:tint="@android:color/white" />
+
+                <ImageButton
+                    android:id="@+id/button_share"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="12dp"
+                    android:background="@drawable/button"
+                    android:contentDescription="Share"
+                    android:padding="12dp"
+                    android:src="@drawable/outline_arrow_outward_24"
+                    android:tint="@android:color/white" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

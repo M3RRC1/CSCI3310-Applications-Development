@@ -116,10 +116,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     public void onMapReady(GoogleMap googleMap) {
 
         mMap = googleMap;
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) return;
+        boolean hasLocationPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
 
-        mMap.setMyLocationEnabled(true);
+        if (hasLocationPermission) {
+            mMap.setMyLocationEnabled(true);
+        }
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
         mMap.setMinZoomPreference(14f);
@@ -134,27 +136,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             return true;
         });
 
-        LocationHelper.getLastLocation(this, location -> {
-            if (location != null) {
-                currentLocation = location;
-                firebaseManager.setCurrentLocation(location);
+        if (hasLocationPermission) {
+            LocationHelper.getLastLocation(this, location -> {
+                if (location != null) {
+                    currentLocation = location;
+                    firebaseManager.setCurrentLocation(location);
 
-                LatLng userLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    LatLng userLatLng = new LatLng(location.getLatitude(), location.getLongitude());
 
-                // Zoom camera to user
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 15f));
+                    // Zoom camera to user
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(userLatLng, 15f));
 
-                // draw radius circle
-                updateDetectionRadiusCircle();
+                    // draw radius circle
+                    updateDetectionRadiusCircle();
 
-                loadPosts();
-            } else {
-                Toast.makeText(this, "Could not get location", Toast.LENGTH_SHORT).show();
-                loadPosts();
-            }
-        });
+                    loadPosts();
+                } else {
+                    Toast.makeText(this, "Could not get location", Toast.LENGTH_SHORT).show();
+                    loadPosts();
+                }
+            });
 
-        startLocationTracking();
+            startLocationTracking();
+        } else {
+            loadPosts();
+        }
     }
 
     private void startLocationTracking() {
@@ -176,30 +182,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private void loadPosts() {
         if (mMap == null) return;
         firebaseManager.getPosts(posts -> {
-            mMap.clear();
-            detectionRadiusCircle = null;
-            updateDetectionRadiusCircle();
+        mMap.clear();
+        detectionRadiusCircle = null;
+        updateDetectionRadiusCircle();
             for (Post post : posts) {
-                float[] distance = new float[1];
-                if (currentLocation != null) {
-                    Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
-                            post.latitude, post.longitude, distance);
-                }
-
-                if (distance[0] <= radiusInMeters || currentLocation == null) {
-                    LatLng pos = new LatLng(post.latitude, post.longitude);
-                    String userLabel = post.userId != null && post.userId.length() > 8
-                            ? post.userId.substring(0, 8) + "..."
-                            : (post.userId == null || post.userId.isEmpty() ? "Unknown" : post.userId);
-                    String snippetText = post.text == null ? "" : post.text;
-                    Marker marker = mMap.addMarker(new MarkerOptions()
-                            .position(pos)
-                            .title("User: " + userLabel)
-                            .snippet(snippetText));
-                    marker.setTag(post);
-                }
+            float[] distance = new float[1];
+            if (currentLocation != null) {
+                Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
+                        post.latitude, post.longitude, distance);
             }
-        }, error -> Toast.makeText(this, "Load posts failed: " + error, Toast.LENGTH_SHORT).show());
+
+            if (distance[0] <= radiusInMeters || currentLocation == null) {
+                LatLng pos = new LatLng(post.latitude, post.longitude);
+                String userLabel = post.userId != null && post.userId.length() > 8
+                        ? post.userId.substring(0, 8) + "..."
+                        : (post.userId == null || post.userId.isEmpty() ? "Unknown" : post.userId);
+                String snippetText = post.text == null ? "" : post.text;
+                Marker marker = mMap.addMarker(new MarkerOptions()
+                        .position(pos)
+                        .title("User: " + userLabel)
+                        .snippet(snippetText));
+                marker.setTag(post);
+            }
+        }
+        },
+            error -> { });
+
     }
 
     private void updateDetectionRadiusCircle() {
