@@ -124,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setZoomGesturesEnabled(true);
-        mMap.setMinZoomPreference(12f);
+        mMap.setMinZoomPreference(14f);
 
         // Marker click
         mMap.setOnMarkerClickListener(marker -> {
@@ -252,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     protected void onPause() {
         super.onPause();
-        firebaseManager.stopNearbyPostsListener();
+        //firebaseManager.stopNearbyPostsListener();
         LocationHelper.stopLocationUpdates(this, locationCallback);
         locationCallback = null;
     }
