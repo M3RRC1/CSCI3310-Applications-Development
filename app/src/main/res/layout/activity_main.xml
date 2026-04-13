@@ -85,8 +85,8 @@
 
     <Button
         android:id="@+id/buttonAddPost"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="74dp"
+        android:layout_height="59dp"
         android:layout_margin="18dp"
         android:background="@drawable/button"
         android:text="+"

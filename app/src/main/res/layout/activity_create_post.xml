@@ -49,7 +49,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="220dp"
                     android:contentDescription="Selected image preview"
-                    android:scaleType="centerCrop"
+                    android:scaleType="centerInside"
                     android:src="@drawable/bg_create_post_preview" />
 
                 <EditText
@@ -82,7 +82,7 @@
                         android:contentDescription="Select image"
                         android:padding="12dp"
                         android:src="@drawable/outline_add_24"
-                        android:tint="@android:color/white" />
+                        app:tint="@android:color/white" />
 
                     <ImageButton
                         android:id="@+id/buttonPost"
@@ -93,7 +93,7 @@
                         android:contentDescription="Post"
                         android:padding="12dp"
                         android:src="@drawable/outline_arrow_forward_ios_24"
-                        android:tint="@android:color/white" />
+                        app:tint="@android:color/white" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
