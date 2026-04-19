@@ -3,6 +3,7 @@ package com.example.location_based_social_media.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -13,16 +14,21 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.example.location_based_social_media.R;
 import com.example.location_based_social_media.data.Like;
 import com.example.location_based_social_media.data.Post;
 import com.example.location_based_social_media.firebase.FirebaseManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -193,33 +199,40 @@ public class PostDetailFragment extends BottomSheetDialogFragment {
     }
 
     private void shareImageAndText(String imageUrl, String shareText) {
-        if (!isAdded()) {
-            return;
-        }
+        StorageReference storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(imageUrl);
 
         Toast.makeText(requireContext(), "Preparing image...", Toast.LENGTH_SHORT).show();
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                Uri sharedImageUri = copyRemoteImageToCache(imageUrl);
-                if (sharedImageUri == null) {
-                    Log.e(TAG, "Unable to prepare image for sharing");
-                    postShareError("Unable to prepare image for sharing");
-                    return;
-                }
 
-                Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, shareText);
-                sendIntent.putExtra(Intent.EXTRA_STREAM, sharedImageUri);
-                sendIntent.setType("image/*");
-                sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-                new Handler(Looper.getMainLooper()).post(() -> launchShareChooser(sendIntent));
-            } catch (Exception e) {
-                Log.e(TAG, "Share failed: " + e.getMessage(), e);
-                postShareError("Share failed: " + e.getMessage());
-            }
-        });
+        try {
+            File localFile = File.createTempFile("shared_image", ".jpg", requireContext().getCacheDir());
+            storageRef.getFile(localFile)
+                    .addOnSuccessListener(taskSnapshot -> {
+                        shareImageWithText(localFile, shareText);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(requireContext(), "Failed to download image", Toast.LENGTH_SHORT).show();
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+    private void shareImageWithText(File imageFile, String shareText) {
+        Uri uri = FileProvider.getUriForFile(
+                requireContext(),
+                requireContext().getPackageName() + ".provider",
+                imageFile
+        );
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        shareIntent.setType("image/*");
+        shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        startActivity(Intent.createChooser(shareIntent, "Share post via"));
+    }
+
 
     private Uri copyRemoteImageToCache(String imageUrl) throws IOException, InterruptedException, java.util.concurrent.ExecutionException {
         Context context = requireContext().getApplicationContext();
