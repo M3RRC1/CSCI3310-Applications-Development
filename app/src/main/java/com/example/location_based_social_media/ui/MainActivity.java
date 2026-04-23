@@ -89,6 +89,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 }
             }
         });
+        NotificationHelper.requestNotificationPermission(this);
+        NotificationHelper.createChannel(this);
+        firebaseManager.listenForNearbyPosts(this);
+
+        String postId = getIntent().getStringExtra("post_id");
+        if (postId != null) {
+            Bundle args = new Bundle();
+            args.putString("post_id", postId);
+
+            PostDetailFragment fragment = new PostDetailFragment();
+            fragment.setArguments(args);
+
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .addToBackStack(null)
+                    .commit();
+        }
 
         buttonAddPost.setOnClickListener(v -> startActivity(new Intent(this, CreatePostActivity.class)));
         buttonSignOut.setOnClickListener(v -> {
@@ -107,9 +124,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         if (mapFragment != null) mapFragment.getMapAsync(this);
 
-        NotificationHelper.requestNotificationPermission(this);
-        NotificationHelper.createChannel(this);
-        firebaseManager.listenForNearbyPosts(this);
     }
 
     @Override
