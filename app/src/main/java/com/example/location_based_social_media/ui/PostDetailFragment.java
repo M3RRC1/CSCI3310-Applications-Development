@@ -1,5 +1,7 @@
 package com.example.location_based_social_media.ui;
 
+import static android.content.Intent.getIntent;
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;

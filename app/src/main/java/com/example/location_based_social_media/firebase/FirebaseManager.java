@@ -255,7 +255,7 @@ public class FirebaseManager {
                 results
         );
         if (results[0] <= radiusInMeters) {
-            NotificationHelper.show(context, "New post nearby", post.text);
+            NotificationHelper.show(context, "New post nearby", post.text, post.id);
         }
     }
 
